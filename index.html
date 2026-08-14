@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ema — Quest: English</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #14101f;
+    --panel: #1f1830;
+    --panel-2: #261d3a;
+    --border: #33284a;
+    --text: #f0ecf7;
+    --text-dim: #a89bc2;
+    --gold: #e8b34d;
+    --teal: #46d9c9;
+    --coral: #ff6b6b;
+    --font-pixel: 'Press Start 2P', monospace;
+    --font-body: 'Space Grotesk', sans-serif;
+  }
+  *{ box-sizing: border-box; }
+  html,body{
+    margin:0; padding:0; height:100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+  }
+  body{
+    background-image:
+      radial-gradient(circle at 15% 10%, rgba(232,179,77,0.07), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(70,217,201,0.06), transparent 40%);
+  }
+  .app{
+    max-width: 640px;
+    margin: 0 auto;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    background: var(--bg);
+  }
+
+  /* ---------- HUD ---------- */
+  .hud{
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, var(--panel), var(--bg));
+  }
+  .hud-top{
+    display:flex; align-items:center; gap:10px; margin-bottom:8px;
+  }
+  .lvl-badge{
+    font-family: var(--font-pixel);
+    font-size: 11px;
+    color: var(--bg);
+    background: var(--gold);
+    padding: 6px 8px;
+    border: 2px solid #a97a24;
+    box-shadow: 2px 2px 0 #00000055;
+    flex-shrink:0;
+  }
+  .title{
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.3px;
+  }
+  .title span{ color: var(--text-dim); font-weight: 500; font-size: 12px; display:block; margin-top:1px;}
+  .streak{
+    margin-left:auto;
+    font-size: 12px;
+    color: var(--coral);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .xp-track{
+    height: 10px;
+    background: #0d0a16;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+  }
+  .xp-fill{
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold), #f6d17c);
+    transition: width 0.5s ease;
+  }
+  .xp-label{
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    text-align: right;
+  }
+
+  /* ---------- CHAT ---------- */
+  .chat{
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .msg{ max-width: 84%; display:flex; flex-direction:column; gap:6px; }
+  .msg.ai{ align-self: flex-start; }
+  .msg.user{ align-self: flex-end; align-items:flex-end; }
+
+  .bubble{
+    padding: 10px 13px;
+    border-radius: 4px;
+    font-size: 14.5px;
+    line-height: 1.5;
+    position: relative;
+  }
+  .msg.ai .bubble{
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--teal);
+  }
+  .msg.user .bubble{
+    background: #2c2140;
+    border: 1px solid #402e5c;
+    border-right: 3px solid var(--gold);
+  }
+  .who{
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    display:flex; align-items:center; gap:6px;
+  }
+  .speak-btn{
+    background: none; border: none; color: var(--teal);
+    cursor: pointer; font-size: 13px; padding: 0 2px; line-height:1;
+  }
+  .speak-btn:hover{ color: #fff; }
+
+  .corrections{
+    margin-top: 2px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .correction-card{
+    background: #2a1620;
+    border: 1px solid #4a2530;
+    border-left: 3px solid var(--coral);
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-size: 12.5px;
+    color: var(--text-dim);
+  }
+  .correction-card .fix{
+    color: var(--text);
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .correction-card .orig{
+    text-decoration: line-through;
+    color: #c98b8b;
+  }
+  .correction-card .corr{
+    color: var(--teal);
+  }
+  .perfect-tag{
+    font-size: 11.5px;
+    color: var(--teal);
+    display:flex; align-items:center; gap:5px;
+  }
+
+  .typing{
+    align-self:flex-start;
+    font-size: 12px;
+    color: var(--text-dim);
+    padding: 4px 4px;
+  }
+
+  /* ---------- INPUT ---------- */
+  .input-bar{
+    border-top: 1px solid var(--border);
+    background: var(--panel);
+    padding: 10px 12px;
+    display: flex; gap: 8px; align-items:center;
+  }
+  .mic-btn, .send-btn{
+    border: none;
+    cursor: pointer;
+    flex-shrink: 0;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .mic-btn{
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 16px;
+    transition: all 0.15s ease;
+  }
+  .mic-btn.recording{
+    background: var(--coral);
+    border-color: var(--coral);
+    color: #1a0a0a;
+    animation: pulse 1.1s infinite;
+  }
+  @keyframes pulse{
+    0%{ box-shadow: 0 0 0 0 rgba(255,107,107,0.5); }
+    70%{ box-shadow: 0 0 0 8px rgba(255,107,107,0); }
+    100%{ box-shadow: 0 0 0 0 rgba(255,107,107,0); }
+  }
+  input[type=text]{
+    flex: 1;
+    background: #0d0a16;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 10px 15px;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    outline: none;
+  }
+  input[type=text]:focus{ border-color: var(--teal); }
+  .send-btn{
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--teal);
+    color: #0d1f1c;
+    font-size: 16px;
+  }
+  .send-btn:disabled{ opacity: 0.4; cursor: default; }
+
+  .hint{
+    font-size: 11px;
+    color: var(--text-dim);
+    text-align: center;
+    padding: 4px 0 0;
+  }
+
+  ::-webkit-scrollbar{ width: 8px; }
+  ::-webkit-scrollbar-thumb{ background: var(--border); border-radius: 4px; }
+
+  /* ---------- API KEY SETUP ---------- */
+  .setup-screen{
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 24px 22px;
+    gap: 14px;
+  }
+  .setup-screen h1{
+    font-size: 20px;
+    margin: 0 0 2px;
+  }
+  .setup-screen p{
+    font-size: 13.5px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    margin: 0;
+  }
+  .setup-screen a{ color: var(--teal); }
+  .setup-screen input[type=password]{
+    width: 100%;
+    background: #0d0a16;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 11px 13px;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    outline: none;
+    margin-top: 6px;
+  }
+  .setup-screen input[type=password]:focus{ border-color: var(--teal); }
+  .setup-screen button{
+    margin-top: 4px;
+    background: var(--teal);
+    color: #0d1f1c;
+    border: none;
+    border-radius: 8px;
+    padding: 11px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .setup-error{
+    color: var(--coral);
+    font-size: 12.5px;
+    display: none;
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <div class="setup-screen" id="setupScreen">
+    <h1>Ema — Quest: English</h1>
+    <p>Pra rodar fora do Claude, esse app usa a API gratuita do Gemini (Google). Sua chave fica salva só no seu navegador, nunca sai do seu celular/PC.</p>
+    <p>Pega sua chave grátis em <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com/app/apikey</a> — não pede cartão de crédito.</p>
+    <input type="password" id="apiKeyInput" placeholder="AIzaSy...">
+    <button id="saveKeyBtn">Salvar e começar</button>
+    <div class="setup-error" id="setupError">Chave inválida. Confere se copiou certinho.</div>
+  </div>
+
+  <div class="hud" id="hud" style="display:none">
+    <div class="hud-top">
+      <div class="lvl-badge" id="lvlBadge">LV 1</div>
+      <div class="title">Quest: English<span id="subtitle">Missão diária de conversação</span></div>
+      <div class="streak" id="streak">🔥 0 dias</div>
+    </div>
+    <div class="xp-track"><div class="xp-fill" id="xpFill" style="width:0%"></div></div>
+    <div class="xp-label" id="xpLabel">0 / 100 XP</div>
+  </div>
+
+  <div class="chat" id="chat" style="display:none"></div>
+
+  <div id="inputArea" style="display:none">
+    <div class="input-bar">
+      <button class="mic-btn" id="micBtn" title="Falar">🎤</button>
+      <input type="text" id="textInput" placeholder="Type in English..." autocomplete="off">
+      <button class="send-btn" id="sendBtn">➤</button>
+    </div>
+    <div class="hint" id="hint">Nível: Intermediário · respostas corrigidas em português</div>
+  </div>
+</div>
+
+<script>
+const LEVEL = "intermediate"; // B1 - set from onboarding
+const STATE_KEY = "ema-quest-state";
+const API_KEY_STORAGE = "ema-quest-api-key";
+
+function getApiKey(){
+  return localStorage.getItem(API_KEY_STORAGE) || "";
+}
+function setApiKey(key){
+  localStorage.setItem(API_KEY_STORAGE, key);
+}
+
+let state = {
+  level: 1,
+  xp: 0,
+  streak: 0,
+  lastActiveDate: null,
+  messages: [] // {role:'ai'|'user', text, corrections?, perfect?}
+};
+
+const chatEl = document.getElementById('chat');
+const xpFillEl = document.getElementById('xpFill');
+const xpLabelEl = document.getElementById('xpLabel');
+const lvlBadgeEl = document.getElementById('lvlBadge');
+const streakEl = document.getElementById('streak');
+const textInput = document.getElementById('textInput');
+const sendBtn = document.getElementById('sendBtn');
+const micBtn = document.getElementById('micBtn');
+const hintEl = document.getElementById('hint');
+
+function xpForLevel(lvl){ return lvl * 100; }
+
+function renderHUD(){
+  lvlBadgeEl.textContent = `LV ${state.level}`;
+  const need = xpForLevel(state.level);
+  const pct = Math.min(100, Math.round((state.xp / need) * 100));
+  xpFillEl.style.width = pct + '%';
+  xpLabelEl.textContent = `${state.xp} / ${need} XP`;
+  streakEl.textContent = `🔥 ${state.streak} dia${state.streak === 1 ? '' : 's'}`;
+}
+
+function addXP(amount){
+  state.xp += amount;
+  const need = xpForLevel(state.level);
+  if(state.xp >= need){
+    state.xp -= need;
+    state.level += 1;
+  }
+  renderHUD();
+}
+
+function updateStreak(){
+  const today = new Date().toDateString();
+  if(state.lastActiveDate === today) return;
+  const yesterday = new Date(Date.now() - 86400000).toDateString();
+  if(state.lastActiveDate === yesterday){
+    state.streak += 1;
+  } else {
+    state.streak = 1;
+  }
+  state.lastActiveDate = today;
+  renderHUD();
+}
+
+function renderMessage(msg){
+  const wrap = document.createElement('div');
+  wrap.className = 'msg ' + (msg.role === 'ai' ? 'ai' : 'user');
+
+  const who = document.createElement('div');
+  who.className = 'who';
+  who.innerHTML = msg.role === 'ai'
+    ? `Ema ${msg.role === 'ai' ? '<button class="speak-btn" data-text="'+encodeURIComponent(msg.text)+'">🔊</button>' : ''}`
+    : 'Você';
+  wrap.appendChild(who);
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.textContent = msg.text;
+  wrap.appendChild(bubble);
+
+  if(msg.role === 'user'){
+    if(msg.corrections && msg.corrections.length){
+      const box = document.createElement('div');
+      box.className = 'corrections';
+      msg.corrections.forEach(c => {
+        const card = document.createElement('div');
+        card.className = 'correction-card';
+        card.innerHTML = `<div class="fix"><span class="orig">${escapeHTML(c.original)}</span> → <span class="corr">${escapeHTML(c.corrected)}</span></div>${escapeHTML(c.explanation)}`;
+        box.appendChild(card);
+      });
+      wrap.appendChild(box);
+    } else if(msg.perfect){
+      const tag = document.createElement('div');
+      tag.className = 'perfect-tag';
+      tag.innerHTML = '✅ Perfeito! +15 XP';
+      wrap.appendChild(tag);
+    }
+  }
+
+  chatEl.appendChild(wrap);
+  chatEl.scrollTop = chatEl.scrollHeight;
+
+  const speakBtn = wrap.querySelector('.speak-btn');
+  if(speakBtn){
+    speakBtn.addEventListener('click', () => speak(decodeURIComponent(speakBtn.dataset.text)));
+  }
+}
+
+function escapeHTML(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function showTyping(){
+  const t = document.createElement('div');
+  t.className = 'typing';
+  t.id = 'typingIndicator';
+  t.textContent = 'Ema está digitando...';
+  chatEl.appendChild(t);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+function hideTyping(){
+  const t = document.getElementById('typingIndicator');
+  if(t) t.remove();
+}
+
+let englishVoice = null;
+function pickEnglishVoice(){
+  const voices = window.speechSynthesis.getVoices();
+  if(!voices.length) return;
+  englishVoice =
+    voices.find(v => v.lang === 'en-US' && /female|natural|google/i.test(v.name)) ||
+    voices.find(v => v.lang === 'en-US') ||
+    voices.find(v => v.lang && v.lang.startsWith('en')) ||
+    null;
+}
+if('speechSynthesis' in window){
+  pickEnglishVoice();
+  window.speechSynthesis.onvoiceschanged = pickEnglishVoice;
+}
+
+function stripForSpeech(text){
+  // remove emojis and other symbols so the TTS engine doesn't try to read them aloud
+  return text
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]/gu, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+function speak(text){
+  if(!('speechSynthesis' in window)) return;
+  const clean = stripForSpeech(text);
+  if(!clean) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(clean);
+  utter.lang = 'en-US';
+  if(englishVoice) utter.voice = englishVoice;
+  utter.rate = 0.95;
+  window.speechSynthesis.speak(utter);
+}
+
+const SYSTEM_PROMPT = `You are Ema, a warm, encouraging English conversation partner helping a Brazilian Portuguese speaker practice English. The user's level is ${LEVEL} (roughly B1-B2).
+
+Rules:
+- Continue the conversation naturally in English. Keep replies conversational, max 3-4 sentences, and end with a follow-up question to keep the conversation going.
+- Do not use emojis in your reply text. Your replies are read aloud by text-to-speech, and emojis get read as literal words, which breaks the flow.
+- Match the vocabulary and complexity to their level: not too simple, not too advanced.
+- Review the user's LAST message for English mistakes (grammar, word choice, naturalness, verb tense). List up to 3 corrections. Each correction needs: the original incorrect phrase (short, just the relevant words), the corrected version, and a short explanation IN PORTUGUESE (Brazilian) of why.
+- If the user's message had no mistakes, return an empty corrections array.
+- Do not correct the very first message if it's just a greeting.
+
+Respond with ONLY valid JSON, no markdown fences, no preamble, in exactly this shape:
+{"reply": "your English reply here", "corrections": [{"original": "...", "corrected": "...", "explanation": "..."}]}`;
+
+const GEMINI_MODEL = "gemini-3.6-flash";
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+
+async function callEma(conversationForAPI){
+  const response = await fetch(`${GEMINI_URL}?key=${encodeURIComponent(getApiKey())}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      contents: conversationForAPI,
+      generationConfig: { responseMimeType: "application/json" }
+    })
+  });
+  if(!response.ok){
+    const errBody = await response.text();
+    throw new Error(`API error ${response.status}: ${errBody}`);
+  }
+  const data = await response.json();
+  const text = (data.candidates?.[0]?.content?.parts || [])
+    .map(part => part.text || '')
+    .join('')
+    .replace(/```json|```/g, '')
+    .trim();
+  try{
+    return JSON.parse(text);
+  } catch(e){
+    return { reply: text || "Sorry, could you say that again?", corrections: [] };
+  }
+}
+
+function buildAPIHistory(){
+  // Convert our stored messages into Gemini's contents/parts format
+  return state.messages.map(m => ({
+    role: m.role === 'ai' ? 'model' : 'user',
+    parts: [{ text: m.text }]
+  }));
+}
+
+async function handleSend(){
+  const text = textInput.value.trim();
+  if(!text) return;
+  textInput.value = '';
+  sendBtn.disabled = true;
+
+  updateStreak();
+
+  const userMsg = { role: 'user', text };
+  state.messages.push(userMsg);
+  renderMessage(userMsg);
+  await saveState();
+
+  showTyping();
+  try{
+    const apiHistory = buildAPIHistory();
+    const result = await callEma(apiHistory);
+    hideTyping();
+
+    const corrections = Array.isArray(result.corrections) ? result.corrections : [];
+    userMsg.corrections = corrections;
+    userMsg.perfect = corrections.length === 0;
+
+    // re-render last user message with correction feedback
+    chatEl.lastElementChild && chatEl.removeChild(chatEl.lastElementChild);
+    renderMessage(userMsg);
+
+    addXP(corrections.length === 0 ? 15 : 5);
+
+    const aiMsg = { role: 'ai', text: result.reply || "..." };
+    state.messages.push(aiMsg);
+    renderMessage(aiMsg);
+
+    await saveState();
+  } catch(err){
+    hideTyping();
+    console.error('Ema error:', err);
+    const aiMsg = { role: 'ai', text: "Hmm, I had trouble connecting. Can you try sending that again? (check the browser console if this keeps happening)" };
+    renderMessage(aiMsg);
+  } finally {
+    sendBtn.disabled = false;
+  }
+}
+
+sendBtn.addEventListener('click', handleSend);
+textInput.addEventListener('keydown', e => { if(e.key === 'Enter') handleSend(); });
+
+// ---------- Voice input (speech-to-text) ----------
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognizing = false;
+let recognizer = null;
+
+if(SpeechRecognition){
+  recognizer = new SpeechRecognition();
+  recognizer.lang = 'en-US';
+  recognizer.interimResults = false;
+  recognizer.maxAlternatives = 1;
+
+  recognizer.onstart = () => {
+    recognizing = true;
+    micBtn.classList.add('recording');
+  };
+  recognizer.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    textInput.value = transcript;
+  };
+  recognizer.onend = () => {
+    recognizing = false;
+    micBtn.classList.remove('recording');
+  };
+  recognizer.onerror = (event) => {
+    recognizing = false;
+    micBtn.classList.remove('recording');
+    if(event.error === 'not-allowed' || event.error === 'service-not-allowed'){
+      hintEl.textContent = 'Microfone bloqueado neste app. Use o microfone do teclado do celular pra ditar.';
+    } else if(event.error === 'no-speech'){
+      hintEl.textContent = 'Não captei nada, tenta de novo.';
+    } else {
+      hintEl.textContent = `Erro no microfone (${event.error}). Use o microfone do teclado como alternativa.`;
+    }
+  };
+
+  micBtn.addEventListener('click', () => {
+    if(recognizing){
+      recognizer.stop();
+      return;
+    }
+    try{
+      recognizer.start();
+    } catch(e){
+      console.warn('Mic start failed:', e);
+      hintEl.textContent = 'Não consegui acessar o microfone. Use o microfone do teclado do celular pra ditar.';
+    }
+  });
+} else {
+  micBtn.style.display = 'none';
+  hintEl.textContent = 'Reconhecimento de voz não disponível neste navegador · nível: Intermediário';
+}
+
+// ---------- Persistence ----------
+function saveState(){
+  try{
+    localStorage.setItem(STATE_KEY, JSON.stringify(state));
+  } catch(e){
+    console.warn('Could not save state:', e);
+  }
+}
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STATE_KEY);
+    if(raw) state = JSON.parse(raw);
+  } catch(e){
+    // no saved state yet, that's fine
+  }
+}
+
+const setupScreen = document.getElementById('setupScreen');
+const hudEl = document.getElementById('hud');
+const inputAreaEl = document.getElementById('inputArea');
+const apiKeyInput = document.getElementById('apiKeyInput');
+const saveKeyBtn = document.getElementById('saveKeyBtn');
+const setupError = document.getElementById('setupError');
+
+function showApp(){
+  setupScreen.style.display = 'none';
+  hudEl.style.display = '';
+  chatEl.style.display = '';
+  inputAreaEl.style.display = '';
+}
+
+async function verifyKeyAndStart(key){
+  saveKeyBtn.disabled = true;
+  saveKeyBtn.textContent = 'Verificando...';
+  setupError.style.display = 'none';
+  try{
+    const testRes = await fetch(`${GEMINI_URL}?key=${encodeURIComponent(key)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: "hi" }] }]
+      })
+    });
+    if(!testRes.ok){
+      const errText = await testRes.text();
+      throw new Error(`${testRes.status}: ${errText}`);
+    }
+    setApiKey(key);
+    showApp();
+    init();
+  } catch(e){
+    console.warn('API key check failed:', e);
+    setupError.textContent = 'Erro: ' + e.message + ' (veja mais detalhes no console do navegador)';
+    setupError.style.display = 'block';
+  } finally {
+    saveKeyBtn.disabled = false;
+    saveKeyBtn.textContent = 'Salvar e começar';
+  }
+}
+
+saveKeyBtn.addEventListener('click', () => {
+  const key = apiKeyInput.value.trim();
+  if(!key) return;
+  verifyKeyAndStart(key);
+});
+apiKeyInput.addEventListener('keydown', e => {
+  if(e.key === 'Enter') saveKeyBtn.click();
+});
+
+function init(){
+  loadState();
+  renderHUD();
+
+  if(state.messages.length === 0){
+    const greeting = {
+      role: 'ai',
+      text: "Hey there! I'm Ema. Let's practice some English together. Tell me — what's something fun you did this week?"
+    };
+    state.messages.push(greeting);
+    renderMessage(greeting);
+    saveState();
+  } else {
+    state.messages.forEach(renderMessage);
+  }
+}
+
+// entry point: skip setup screen if a key is already saved
+const existingKey = getApiKey();
+if(existingKey){
+  showApp();
+  init();
+}
+</script>
+</body>
+</html>
