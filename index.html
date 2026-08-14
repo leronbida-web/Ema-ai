@@ -475,16 +475,35 @@ function stripForSpeech(text){
     .trim();
 }
 
-function speak(text){
-  if(!('speechSynthesis' in window)) return;
+function speak(text, onEnd){
+  if(!('speechSynthesis' in window)){
+    if(onEnd) onEnd();
+    return;
+  }
   const clean = stripForSpeech(text);
-  if(!clean) return;
+  if(!clean){
+    if(onEnd) onEnd();
+    return;
+  }
   window.speechSynthesis.cancel();
   const utter = new SpeechSynthesisUtterance(clean);
   utter.lang = 'en-US';
   if(englishVoice) utter.voice = englishVoice;
   utter.rate = 0.95;
+  if(onEnd){
+    utter.onend = onEnd;
+    utter.onerror = onEnd;
+  }
   window.speechSynthesis.speak(utter);
+}
+
+function startListening(){
+  if(!recognizer || recognizing) return;
+  try{
+    recognizer.start();
+  } catch(e){
+    console.warn('Auto mic start failed:', e);
+  }
 }
 
 const SYSTEM_PROMPT = `You are Ema, a warm, encouraging English conversation partner helping a Brazilian Portuguese speaker practice English. The user's level is ${LEVEL} (roughly B1-B2).
@@ -570,7 +589,7 @@ async function handleSend(){
     const aiMsg = { role: 'ai', text: result.reply || "..." };
     state.messages.push(aiMsg);
     renderMessage(aiMsg);
-    speak(aiMsg.text);
+    speak(aiMsg.text, startListening);
 
     await saveState();
   } catch(err){
@@ -720,7 +739,7 @@ function init(){
     };
     state.messages.push(greeting);
     renderMessage(greeting);
-    speak(greeting.text);
+    speak(greeting.text, startListening);
     saveState();
   } else {
     state.messages.forEach(renderMessage);
