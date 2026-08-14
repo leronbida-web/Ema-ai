@@ -570,6 +570,7 @@ async function handleSend(){
     const aiMsg = { role: 'ai', text: result.reply || "..." };
     state.messages.push(aiMsg);
     renderMessage(aiMsg);
+    speak(aiMsg.text);
 
     await saveState();
   } catch(err){
@@ -603,6 +604,7 @@ if(SpeechRecognition){
   recognizer.onresult = (event) => {
     const transcript = event.results[0][0].transcript;
     textInput.value = transcript;
+    handleSend();
   };
   recognizer.onend = () => {
     recognizing = false;
@@ -718,6 +720,7 @@ function init(){
     };
     state.messages.push(greeting);
     renderMessage(greeting);
+    speak(greeting.text);
     saveState();
   } else {
     state.messages.forEach(renderMessage);
