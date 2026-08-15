@@ -783,19 +783,26 @@ if(SpeechRecognition){
     resetSilenceTimer();
   };
   recognizer.onresult = (event) => {
-    // Sum only CLOSED (final) segments - each one is locked in and won't repeat.
-    // For the in-progress segment, use ONLY the most recent entry, since some
-    // browsers keep growing that single entry rather than sending fragments -
-    // summing every non-final entry duplicates words as it grows ("I" -> "I don't" -> "I don't know").
+    // Some mobile speech engines mark each growing version of the SAME utterance
+    // as "final" (e.g. "I", then "I don't", then "I don't have flowers" - all isFinal=true).
+    // If we just sum every final entry we get "I I don't I don't have flowers".
+    // Fix: if a new final segment already starts with what we've accumulated so far,
+    // it's a regrowth of the same segment - replace, don't append. Only append when
+    // it's genuinely a new segment (real pause between separate utterances).
     let final = '';
     for(let i = 0; i < event.results.length; i++){
-      if(event.results[i].isFinal){
-        final += event.results[i][0].transcript + ' ';
+      if(!event.results[i].isFinal) continue;
+      const segment = event.results[i][0].transcript.trim();
+      if(!segment) continue;
+      if(final && segment.toLowerCase().startsWith(final.toLowerCase())){
+        final = segment; // cumulative regrowth of the same segment
+      } else {
+        final = (final + ' ' + segment).trim(); // genuinely new segment
       }
     }
     const lastResult = event.results[event.results.length - 1];
     const interim = (lastResult && !lastResult.isFinal) ? lastResult[0].transcript : '';
-    liveTranscript = (final + interim).trim();
+    liveTranscript = (final + ' ' + interim).trim();
     resetSilenceTimer(); // heard something - give the user more time
   };
   recognizer.onend = () => {
