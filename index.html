@@ -749,7 +749,6 @@ textInput.addEventListener('keydown', e => { if(e.key === 'Enter') handleSend();
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognizing = false;
 let recognizer = null;
-let finalTranscript = '';
 let silenceTimer = null;
 const SILENCE_TIMEOUT_MS = 3500; // how long to wait after the user stops talking before sending
 
@@ -776,21 +775,24 @@ if(SpeechRecognition){
 
   recognizer.onstart = () => {
     recognizing = true;
-    finalTranscript = '';
     micBtn.classList.add('recording');
     resetSilenceTimer();
   };
   recognizer.onresult = (event) => {
+    // Rebuild the full transcript from scratch every time instead of accumulating -
+    // some mobile browsers re-fire already-finalized results with continuous mode,
+    // which causes duplicated words if we append onto a running variable.
+    let final = '';
     let interim = '';
-    for(let i = event.resultIndex; i < event.results.length; i++){
+    for(let i = 0; i < event.results.length; i++){
       const transcript = event.results[i][0].transcript;
       if(event.results[i].isFinal){
-        finalTranscript += transcript + ' ';
+        final += transcript + ' ';
       } else {
         interim += transcript;
       }
     }
-    textInput.value = (finalTranscript + interim).trim();
+    textInput.value = (final + interim).trim();
     resetSilenceTimer(); // heard something - give the user more time
   };
   recognizer.onend = () => {
