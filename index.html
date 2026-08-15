@@ -750,6 +750,7 @@ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecogni
 let recognizing = false;
 let recognizer = null;
 let silenceTimer = null;
+let liveTranscript = '';
 const SILENCE_TIMEOUT_MS = 3500; // how long to wait after the user stops talking before sending
 
 function clearSilenceTimer(){
@@ -775,6 +776,9 @@ if(SpeechRecognition){
 
   recognizer.onstart = () => {
     recognizing = true;
+    liveTranscript = '';
+    textInput.value = '';
+    textInput.placeholder = '🎙️ Ouvindo... fale à vontade';
     micBtn.classList.add('recording');
     resetSilenceTimer();
   };
@@ -791,20 +795,25 @@ if(SpeechRecognition){
     }
     const lastResult = event.results[event.results.length - 1];
     const interim = (lastResult && !lastResult.isFinal) ? lastResult[0].transcript : '';
-    textInput.value = (final + interim).trim();
+    liveTranscript = (final + interim).trim();
     resetSilenceTimer(); // heard something - give the user more time
   };
   recognizer.onend = () => {
     clearSilenceTimer();
     recognizing = false;
     micBtn.classList.remove('recording');
-    const text = textInput.value.trim();
-    if(text) handleSend();
+    textInput.placeholder = 'Type in English...';
+    const text = liveTranscript.trim();
+    if(text){
+      textInput.value = text;
+      handleSend();
+    }
   };
   recognizer.onerror = (event) => {
     clearSilenceTimer();
     recognizing = false;
     micBtn.classList.remove('recording');
+    textInput.placeholder = 'Type in English...';
     if(event.error === 'not-allowed' || event.error === 'service-not-allowed'){
       hintEl.textContent = 'Microfone bloqueado neste app. Use o microfone do teclado do celular pra ditar.';
     } else if(event.error === 'no-speech'){
