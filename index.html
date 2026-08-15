@@ -659,7 +659,7 @@ Rules:
 Respond with ONLY valid JSON, no markdown fences, no preamble, in exactly this shape:
 {"reply": "your English reply here", "corrections": [{"original": "...", "corrected": "...", "explanation": "..."}]}`;
 
-const GEMINI_MODEL = "gemini-3.6-flash";
+const GEMINI_MODEL = "gemini-3.5-flash-lite";
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 async function callEma(conversationForAPI){
