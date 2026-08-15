@@ -312,6 +312,19 @@
     display: none;
   }
   .translation-popup.visible{ display: block; }
+  .translation-popup .tp-word{
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--teal);
+    margin-bottom: 6px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #3a2c52;
+  }
+  .translation-popup .tp-word .en{
+    color: var(--text-dim);
+    font-weight: 500;
+    font-size: 12px;
+  }
   .translation-popup .tp-label{
     font-size: 10px;
     text-transform: uppercase;
@@ -438,6 +451,7 @@ function renderClickableText(container, text){
         span.className = 'word';
         span.textContent = token;
         span.dataset.sentence = sentence;
+        span.dataset.word = token.replace(/^[^\w']+|[^\w']+$/g, '');
         container.appendChild(span);
       }
     });
@@ -445,20 +459,42 @@ function renderClickableText(container, text){
   });
 }
 
-async function translateSentence(sentence){
-  if(translationCache.has(sentence)) return translationCache.get(sentence);
-  const prompt = `Translate the following English sentence or expression into natural, idiomatic Brazilian Portuguese. Give the real conveyed meaning, not a literal word-for-word translation, especially for idioms/expressions. Respond with ONLY the Portuguese translation, nothing else - no quotes, no explanation.\n\nSentence: "${sentence}"`;
+async function translateWordAndSentence(word, sentence){
+  const cacheKey = sentence + '||' + word.toLowerCase();
+  if(translationCache.has(cacheKey)) return translationCache.get(cacheKey);
+
+  const prompt = `You're helping a Brazilian Portuguese speaker understand an English sentence they're learning from.
+
+Sentence: "${sentence}"
+Word/expression clicked: "${word}"
+
+Give two things:
+1. word_translation: the meaning of "${word}" AS USED in this specific sentence, translated to Brazilian Portuguese. Just the word/short phrase translation, not a full sentence.
+2. sentence_meaning: the natural, idiomatic Brazilian Portuguese translation of the FULL sentence - the real conveyed meaning, not a literal word-for-word translation, especially for idioms/expressions.
+
+Respond with ONLY valid JSON, no markdown, no preamble, in exactly this shape:
+{"word_translation": "...", "sentence_meaning": "..."}`;
+
   const response = await fetch(`${GEMINI_URL}?key=${encodeURIComponent(getApiKey())}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] })
+    body: JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: "application/json" }
+    })
   });
   if(!response.ok) throw new Error('translate failed: ' + response.status);
   const data = await response.json();
-  const translation = (data.candidates?.[0]?.content?.parts || [])
-    .map(p => p.text || '').join('').trim();
-  translationCache.set(sentence, translation);
-  return translation;
+  const raw = (data.candidates?.[0]?.content?.parts || [])
+    .map(p => p.text || '').join('').replace(/```json|```/g, '').trim();
+  let result;
+  try{
+    result = JSON.parse(raw);
+  } catch(e){
+    result = { word_translation: '', sentence_meaning: raw };
+  }
+  translationCache.set(cacheKey, result);
+  return result;
 }
 
 function attachWordClickHandler(bubble, popup){
