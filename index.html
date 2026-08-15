@@ -289,6 +289,36 @@
     font-size: 12.5px;
     display: none;
   }
+
+  /* ---------- CLICKABLE WORDS / TRANSLATION ---------- */
+  .word{
+    cursor: pointer;
+    border-bottom: 1px dotted var(--text-dim);
+    transition: background 0.15s ease;
+    border-radius: 2px;
+  }
+  .word:hover, .word:active{
+    background: rgba(70,217,201,0.18);
+  }
+  .translation-popup{
+    margin-top: 8px;
+    background: #241a38;
+    border: 1px solid var(--gold);
+    border-left: 3px solid var(--gold);
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-size: 13px;
+    color: var(--text);
+    display: none;
+  }
+  .translation-popup.visible{ display: block; }
+  .translation-popup .tp-label{
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--gold);
+    margin-bottom: 3px;
+  }
 </style>
 </head>
 <body>
@@ -389,6 +419,65 @@ function updateStreak(){
   renderHUD();
 }
 
+const translationCache = new Map();
+
+function splitIntoSentences(text){
+  const matches = text.match(/[^.!?]+[.!?]*/g);
+  return matches ? matches.map(s => s.trim()).filter(Boolean) : [text];
+}
+
+function renderClickableText(container, text){
+  const sentences = splitIntoSentences(text);
+  sentences.forEach((sentence, sIdx) => {
+    const words = sentence.split(/(\s+)/); // keep whitespace tokens
+    words.forEach(token => {
+      if(/^\s+$/.test(token) || token === ''){
+        container.appendChild(document.createTextNode(token));
+      } else {
+        const span = document.createElement('span');
+        span.className = 'word';
+        span.textContent = token;
+        span.dataset.sentence = sentence;
+        container.appendChild(span);
+      }
+    });
+    if(sIdx < sentences.length - 1) container.appendChild(document.createTextNode(' '));
+  });
+}
+
+async function translateSentence(sentence){
+  if(translationCache.has(sentence)) return translationCache.get(sentence);
+  const prompt = `Translate the following English sentence or expression into natural, idiomatic Brazilian Portuguese. Give the real conveyed meaning, not a literal word-for-word translation, especially for idioms/expressions. Respond with ONLY the Portuguese translation, nothing else - no quotes, no explanation.\n\nSentence: "${sentence}"`;
+  const response = await fetch(`${GEMINI_URL}?key=${encodeURIComponent(getApiKey())}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] })
+  });
+  if(!response.ok) throw new Error('translate failed: ' + response.status);
+  const data = await response.json();
+  const translation = (data.candidates?.[0]?.content?.parts || [])
+    .map(p => p.text || '').join('').trim();
+  translationCache.set(sentence, translation);
+  return translation;
+}
+
+function attachWordClickHandler(bubble, popup){
+  bubble.addEventListener('click', async (e) => {
+    const wordEl = e.target.closest('.word');
+    if(!wordEl) return;
+    const sentence = wordEl.dataset.sentence;
+    popup.classList.add('visible');
+    popup.innerHTML = `<div class="tp-label">Significado</div>Traduzindo...`;
+    try{
+      const translation = await translateSentence(sentence);
+      popup.innerHTML = `<div class="tp-label">Significado</div>${escapeHTML(translation)}`;
+    } catch(err){
+      console.warn('Translation error:', err);
+      popup.innerHTML = `<div class="tp-label">Significado</div>Não consegui traduzir agora.`;
+    }
+  });
+}
+
 function renderMessage(msg){
   const wrap = document.createElement('div');
   wrap.className = 'msg ' + (msg.role === 'ai' ? 'ai' : 'user');
@@ -402,8 +491,19 @@ function renderMessage(msg){
 
   const bubble = document.createElement('div');
   bubble.className = 'bubble';
-  bubble.textContent = msg.text;
+  if(msg.role === 'ai'){
+    renderClickableText(bubble, msg.text);
+  } else {
+    bubble.textContent = msg.text;
+  }
   wrap.appendChild(bubble);
+
+  if(msg.role === 'ai'){
+    const popup = document.createElement('div');
+    popup.className = 'translation-popup';
+    wrap.appendChild(popup);
+    attachWordClickHandler(bubble, popup);
+  }
 
   if(msg.role === 'user'){
     if(msg.corrections && msg.corrections.length){
