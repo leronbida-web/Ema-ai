@@ -779,19 +779,18 @@ if(SpeechRecognition){
     resetSilenceTimer();
   };
   recognizer.onresult = (event) => {
-    // Rebuild the full transcript from scratch every time instead of accumulating -
-    // some mobile browsers re-fire already-finalized results with continuous mode,
-    // which causes duplicated words if we append onto a running variable.
+    // Sum only CLOSED (final) segments - each one is locked in and won't repeat.
+    // For the in-progress segment, use ONLY the most recent entry, since some
+    // browsers keep growing that single entry rather than sending fragments -
+    // summing every non-final entry duplicates words as it grows ("I" -> "I don't" -> "I don't know").
     let final = '';
-    let interim = '';
     for(let i = 0; i < event.results.length; i++){
-      const transcript = event.results[i][0].transcript;
       if(event.results[i].isFinal){
-        final += transcript + ' ';
-      } else {
-        interim += transcript;
+        final += event.results[i][0].transcript + ' ';
       }
     }
+    const lastResult = event.results[event.results.length - 1];
+    const interim = (lastResult && !lastResult.isFinal) ? lastResult[0].transcript : '';
     textInput.value = (final + interim).trim();
     resetSilenceTimer(); // heard something - give the user more time
   };
